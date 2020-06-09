@@ -8,23 +8,6 @@ const {node: documentLoader}  = documentLoaders;
 const publicKeyBase58         = "GKKcpmPU3sanTBkoDZq9fwwysu4x7VaUTquosPchSBza";
 const privateKeyBase58        = "3cEzNVGdLoujfhWXqrbo1FgYy9GHA5GXYvB4KixHVuQoRbWbHTJP7XTkj6LqXeiFhw79v85E4wjPQc8WcdyzntcA";
 
-// specify the public key object
-const publicKey = {
-  '@context': jsigs.SECURITY_CONTEXT_URL,
-  type: 'Ed25519VerificationKey2018',
-  id: 'https://github.com/nikosft#key1',
-  controller: 'https://github.com/nikosft',
-  publicKeyBase58
-};
-
-// specify the public key controller object
-const controller = {
-  '@context': jsigs.SECURITY_CONTEXT_URL,
-  id: 'https://github.com/nikosft',
-  publicKey: [publicKey],
-  assertionMethod: [publicKey.id]
-};
-
 // create the JSON-LD document that should be signed
 const doc = {
     '@context': [
@@ -35,22 +18,32 @@ const doc = {
         homepage: 'schema:url',
       }
     ],
+    id:'did:example:fotiou',
     name: 'Nikos Fotiou',
     homepage: 'https://www.fotiou.gr',
+    publicKey: [{
+      type: 'Ed25519VerificationKey2018',
+      id: 'did:example:fotiou#key1',
+      controller: 'did:example:fotiou',
+      publicKeyBase58: 'GKKcpmPU3sanTBkoDZq9fwwysu4x7VaUTquosPchSBza'
+    }],
+    assertionMethod:[
+      'did:example:fotiou#key1'
+    ]
   };
 
 
-async function sign(jsonData)
+async function sign(did_document)
 {
-  signature = await jsigs.sign(jsonData, 
+  signature = await jsigs.sign(did_document, 
     {
       documentLoader,
       suite: new Ed25519Signature2018({
-        verificationMethod: publicKey.id,
+        verificationMethod: did_document.publicKey[0].id,
         key: new Ed25519KeyPair(
           {
             privateKeyBase58: privateKeyBase58,
-            publicKeyBase58: publicKeyBase58
+            publicKeyBase58: did_document.publicKey[0].publicKeyBase58
           })
       }), 
     purpose: new AssertionProofPurpose()
@@ -64,9 +57,9 @@ async function verify(signedData)
     {
       documentLoader,
       suite: new Ed25519Signature2018({
-        key: new Ed25519KeyPair(publicKey)
+        key: new Ed25519KeyPair(signedData.publicKey[0])
       }), 
-      purpose: new AssertionProofPurpose({controller})
+      purpose: new AssertionProofPurpose({controller:doc})
   })
   return result
 }
